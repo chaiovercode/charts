@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, LabelList, ReferenceLine } from 'recharts';
 
-// Instagram caption (algo-optimized)
+// Instagram caption
 export const caption = `Google's Gemini just became the most honest AI model.
 
-According to Vectara's Hallucination Leaderboard, Gemini 2.0 Flash hallucinates only 0.7% of the time - that's 8x less than Claude.
+According to Vectara's Hallucination Leaderboard (Dec 2025), Gemini 2.5 Flash Lite hallucinates only 3.3% of the time, beating OpenAI's GPT-5.2 (8.4%) significantly.
 
-OpenAI dominates 4 of the top 5 spots, but Google takes the crown.
+While OpenAI and Anthropic battle for "smartest", Google quietly built the most reliable model.
 
 The AI honesty race is heating up. Which model do you trust most?
 
@@ -15,59 +15,33 @@ Source: Vectara Hallucination Leaderboard, Dec 2025
 .
 .
 .
-#ai #llm #gemini #openai #claude #artificialintelligence #chaiovercode`;
+#ai #llm #gemini #google #openai #artificialintelligence #chaiovercode`;
 
-// Data from Vectara Hallucination Leaderboard (Dec 2025)
-// Source: github.com/vectara/hallucination-leaderboard
+// Data from Vectara Hallucination Leaderboard (Dec 18, 2025)
 const data = [
-  { name: 'Gemini 2.0 Flash', value: 0.7, company: 'google', rank: 1 },
-  { name: 'o3-mini (high)', value: 0.8, company: 'openai', rank: 2 },
-  { name: 'GPT-4.5 Preview', value: 1.2, company: 'openai', rank: 3 },
-  { name: 'GPT-5 (high)', value: 1.4, company: 'openai', rank: 4 },
-  { name: 'GPT-4o', value: 1.5, company: 'openai', rank: 5 },
-  { name: 'Grok-3 Beta', value: 2.1, company: 'xai', rank: 6 },
-  { name: 'DeepSeek V3', value: 3.9, company: 'deepseek', rank: 7 },
-  { name: 'Llama 3.3 70B', value: 4.0, company: 'meta', rank: 8 },
-  { name: 'Claude 3.7 Sonnet', value: 4.4, company: 'anthropic', rank: 9 },
-  { name: 'Claude Sonnet 4.5', value: 5.5, company: 'anthropic', rank: 10 },
+  { name: 'Gemini 2.5 Flash Lite', value: 3.3, company: 'google' },
+  { name: 'Phi-4', value: 3.7, company: 'microsoft' },
+  { name: 'Llama 3.3 70B Turbo', value: 4.1, company: 'meta' },
+  { name: 'Gemma 3 12B IT', value: 4.4, company: 'google' },
+  { name: 'Mistral Large 2411', value: 4.5, company: 'mistral' },
+  { name: 'DeepSeek V3.2 Exp', value: 5.3, company: 'deepseek' },
+  { name: 'GPT-4.1 (2025-04)', value: 5.6, company: 'openai' },
+  { name: 'Grok-3', value: 5.8, company: 'xai' },
+  { name: 'Gemini 2.5 Pro', value: 7.0, company: 'google' },
+  { name: 'GPT-5.2 Low', value: 8.4, company: 'openai' },
 ];
 
 const avgRate = (data.reduce((a, b) => a + b.value, 0) / data.length).toFixed(1);
-const worstRate = Math.max(...data.map(d => d.value));
-const bestRate = Math.min(...data.map(d => d.value));
 
 const FORMAT_PRESETS = {
   portrait: { width: 540, height: 675 },
 };
 
 // Simplified narrative colors
-// Hero (Gemini): Lime
-// Comparison/Adversary (Claude): White
-// Others: Neutral Grey
 const NARRATIVE_COLORS = {
-  'Gemini 2.0 Flash': '#c4f441',
-  'Claude Sonnet 4.5': '#ffffff',
-};
-
-// Custom label component
-const CustomLabel = (props) => {
-  const { x, y, width, value, index } = props;
-  const isWinner = index === 0;
-  const isTop3 = index < 3;
-
-  return (
-    <g>
-      <text
-        x={x + width + 8}
-        y={y + 14}
-        fill={isWinner ? '#c4f441' : '#ffffff'}
-        fontSize={isWinner ? 14 : 13}
-        fontWeight={isTop3 ? 700 : 500}
-      >
-        {value}%
-      </text>
-    </g>
-  );
+  'Gemini 2.5 Flash Lite': '#c4f441', // Hero: Lime
+  'GPT-5.2 Low': '#ffffff', // Comparison/Worst
+  'GPT-4.1 (2025-04)': '#10a37f', // Secondary Hero
 };
 
 export default function HallucinationChart() {
@@ -75,23 +49,46 @@ export default function HallucinationChart() {
   const format = 'portrait';
   const preset = FORMAT_PRESETS[format];
 
-  const handleExport = async () => {
-    const html2canvas = (await import('html2canvas')).default;
-    await document.fonts.ready;
-    const canvas = await html2canvas(chartRef.current, {
-      scale: 2,
-      backgroundColor: '#0a0a0a',
-    });
-    const link = document.createElement('a');
-    link.download = `llm-hallucination-rates-${format}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+  // Custom tick for Y-Axis
+  const CustomTick = ({ x, y, payload }) => {
+    const isWinner = payload.index === 0;
+    const isTop3 = payload.index < 3;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={-4}
+          y={4}
+          textAnchor="end"
+          fill={isWinner ? '#c4f441' : isTop3 ? '#ffffff' : '#9ca3af'}
+          fontSize={11}
+          fontWeight={isTop3 ? 600 : 400}
+        >
+          {data[payload.index].name}
+        </text>
+      </g>
+    );
+  };
+
+  // Custom Label for Bar
+  const CustomLabel = (props) => {
+    const { x, y, width, value, index } = props;
+    const isWinner = index === 0;
+    const isTop3 = index < 3;
+    return (
+      <text
+        x={x + width + 8}
+        y={y + 14}
+        fill={isWinner ? '#c4f441' : '#ffffff'}
+        fontSize={isWinner ? 14 : 12}
+        fontWeight={isTop3 ? 700 : 500}
+      >
+        {value}%
+      </text>
+    );
   };
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#0a0a0a', padding: '20px' }}>
-
-
       {/* Chart Container */}
       <div
         id="capture-target"
@@ -100,8 +97,8 @@ export default function HallucinationChart() {
           height: preset.height,
           background: '#000000',
           borderLeft: '4px solid #c4f441',
-          padding: format === 'square' ? '28px 24px' : '32px 28px',
           boxSizing: 'border-box',
+          padding: format === 'square' ? '28px 24px' : '32px 28px',
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -115,20 +112,20 @@ export default function HallucinationChart() {
           letterSpacing: '0.15em',
           marginBottom: '10px',
         }}>
-          Hallucination Leaderboard 2025
+          Hallucination Leaderboard
         </div>
 
         {/* Headline */}
         <h1 style={{
-          fontSize: format === 'square' ? '28px' : '30px',
+          fontSize: '32px',
           fontWeight: 800,
           color: '#ffffff',
           lineHeight: 1.1,
           margin: '0 0 8px 0',
           letterSpacing: '-0.02em',
         }}>
-          Google's AI Lies <span style={{ color: '#c4f441' }}>8x Less</span><br />
-          Than Claude
+          Google's Gemini Takes<br />
+          the <span style={{ color: '#c4f441' }}>Honesty Crown</span>
         </h1>
 
         {/* Subtitle */}
@@ -141,7 +138,7 @@ export default function HallucinationChart() {
           Hallucination rate when summarizing documents · Lower = More Honest
         </p>
 
-        {/* Key Stats Row */}
+        {/* Key Stats Row (Optional, but kept for consistency with previous) */}
         <div style={{
           display: 'flex',
           gap: '16px',
@@ -149,9 +146,9 @@ export default function HallucinationChart() {
           marginBottom: '12px',
         }}>
           {[
-            { label: 'Best', value: `${bestRate}%`, color: '#22c55e', subtext: 'Gemini' },
-            { label: 'Average', value: `${avgRate}%`, color: '#eab308', subtext: '10 models' },
-            { label: 'Worst', value: `${worstRate}%`, color: '#ef4444', subtext: 'Claude' },
+            { label: 'Winner', value: '3.3%', color: '#c4f441', subtext: 'Gemini' },
+            { label: 'Market Avg', value: `${avgRate}%`, color: '#6b7280', subtext: 'Top 10' },
+            { label: 'Laggard', value: '8.4%', color: '#ffffff', subtext: 'GPT-5.2' },
           ].map((stat) => (
             <div key={stat.label} style={{
               background: '#141414',
@@ -172,56 +169,36 @@ export default function HallucinationChart() {
         </div>
 
         {/* Chart Area */}
-        <div style={{ flex: 1, minHeight: 0 }}>
+        <div style={{ flex: 1, marginTop: '16px', minHeight: 0 }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data}
               layout="vertical"
-              margin={{ left: 0, right: 55, top: 4, bottom: 4 }}
-              barCategoryGap="15%"
+              margin={{ left: 10, right: 55, top: 4, bottom: 4 }}
+              barCategoryGap="20%"
             >
-              <XAxis type="number" hide domain={[0, 6]} />
+              <XAxis type="number" hide domain={[0, 9]} />
               <YAxis
                 type="category"
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                tick={({ x, y, payload, index }) => {
-                  const isWinner = index === 0;
-                  const isTop3 = index < 3;
-                  return (
-                    <g>
-                      <text
-                        x={x - 4}
-                        y={y}
-                        dy={4}
-                        textAnchor="end"
-                        fill={isWinner ? '#c4f441' : isTop3 ? '#ffffff' : '#9ca3af'}
-                        fontSize={11}
-                        fontWeight={isTop3 ? 600 : 400}
-                      >
-                        {payload.value}
-                      </text>
-                    </g>
-                  );
-                }}
-                width={110}
+                tick={<CustomTick />}
+                width={130}
               />
-              {/* Average line */}
               <ReferenceLine
                 x={parseFloat(avgRate)}
-                stroke="#eab308"
+                stroke="#3f3f46"
                 strokeDasharray="4 4"
                 strokeWidth={1}
               />
               <Bar
                 dataKey="value"
                 radius={[0, 4, 4, 0]}
-                barSize={format === 'square' ? 20 : 24}
+                barSize={20}
               >
                 {data.map((entry, index) => {
                   const isWinner = index === 0;
-                  // Narrative colors: Winner (Lime), Comparison (White), Others (Grey)
                   const baseColor = NARRATIVE_COLORS[entry.name] || '#3f3f46';
                   return (
                     <Cell
@@ -242,7 +219,6 @@ export default function HallucinationChart() {
           </ResponsiveContainer>
         </div>
 
-
         {/* Insight Callout */}
         <div style={{
           marginTop: '12px',
@@ -253,7 +229,7 @@ export default function HallucinationChart() {
         }}>
           <div style={{ fontSize: '12px', color: '#e5e7eb', fontWeight: 500 }}>
             <span style={{ color: '#c4f441', fontWeight: 700 }}>Key Insight:</span>{' '}
-            OpenAI has 4 models in top 5, but Google's Gemini takes the crown
+            Google's lightweight "Flash Lite" model beats OpenAI's flagship GPT-5.2 in factual consistency.
           </div>
         </div>
 
